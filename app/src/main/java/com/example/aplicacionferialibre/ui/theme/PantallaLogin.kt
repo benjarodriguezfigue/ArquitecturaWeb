@@ -121,6 +121,19 @@ fun PantallaLogin() {
             Text("Registrarse")
         }
 
+        val user = auth.currentUser
+
+        if (user != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(onClick = {
+                auth.signOut()
+                mensaje = "Sesión cerrada. Reinicia la app para iniciar sesión nuevamente."
+            }) {
+                Text("Cerrar sesión")
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         if (mensaje.isNotBlank()) {
