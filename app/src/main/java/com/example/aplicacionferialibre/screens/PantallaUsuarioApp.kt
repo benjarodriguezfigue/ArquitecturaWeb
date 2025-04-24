@@ -29,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.aplicacionferialibre.screens.PantallaInscribirPuesto
 import com.example.aplicacionferialibre.screens.PantallaLoginSimple
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -86,6 +87,13 @@ fun PantallaUsuarioApp() {
                         navController.popBackStack()
                     }
                 }
+                composable("inscribir_puesto") {
+                    PantallaInscribirPuesto(
+                        onSubmitSuccess = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
             }
 
             if (mostrarLogin) {
@@ -117,8 +125,18 @@ fun PantallaUsuarioApp() {
                             Text("Sesión activa como $tipoUsuario: $nombreUsuario")
                             Spacer(modifier = Modifier.height(16.dp))
 
+                            if (tipoUsuario == "feriante") {
+                                Button(onClick = {
+                                    navController.navigate("inscribir_puesto")
+                                    mostrarLogin = false
+                                }) {
+                                    Text("¡Inscribe tu puesto!")
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
                             Button(onClick = {
-                                mostrarLogin = false // ← solo oculta el panel
+                                mostrarLogin = false // solo oculta el panel
                             }) {
                                 Text("Volver")
                             }
@@ -132,14 +150,13 @@ fun PantallaUsuarioApp() {
                             }) {
                                 Text("Cerrar sesión")
                             }
-
                         }
                     }
                 }
             }
 
 
-    }
+        }
     }
 }
 
