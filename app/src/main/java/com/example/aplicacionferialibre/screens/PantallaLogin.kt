@@ -50,18 +50,25 @@ fun PantallaLogin(navController: NavHostController, tipo: String) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = {
-                auth.signInWithEmailAndPassword(correo, contrasena)
-                    .addOnCompleteListener { task ->
-                        scope.launch {
-                            if (task.isSuccessful) {
-                                snackbarHostState.showSnackbar("Inicio de sesión exitoso")
-                                if (tipo == "usuario") navController.navigate("panel_usuario")
-                                else navController.navigate("panel_feriante")
-                            } else {
-                                snackbarHostState.showSnackbar("Error: ${task.exception?.message}")
+                if (correo.isBlank() || contrasena.isBlank()) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Debes completar todos los campos")
+                    }
+                }else{
+                    auth.signInWithEmailAndPassword(correo, contrasena)
+                        .addOnCompleteListener { task ->
+                            scope.launch {
+                                if (task.isSuccessful) {
+                                    snackbarHostState.showSnackbar("Inicio de sesión exitoso")
+                                    if (tipo == "usuario") navController.navigate("panel_usuario")
+                                    else navController.navigate("panel_feriante")
+                                } else {
+                                    snackbarHostState.showSnackbar("Error: ${task.exception?.message}")
+                                }
                             }
                         }
-                    }
+                }
+
             }, modifier = Modifier.fillMaxWidth()) {
                 Text("Iniciar Sesión")
             }

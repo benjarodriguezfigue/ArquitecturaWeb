@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun RegistroFeriante() {
+fun RegistroFeriante(onCancel: () -> Unit = {}) {
     var nombreNegocio by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
@@ -30,29 +30,13 @@ fun RegistroFeriante() {
             Text("Registro de Feriante", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = nombreNegocio,
-                onValueChange = { nombreNegocio = it },
-                label = { Text("Nombre del Negocio") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            OutlinedTextField(value = nombreNegocio, onValueChange = { nombreNegocio = it }, label = { Text("Nombre del Negocio") }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = correo,
-                onValueChange = { correo = it },
-                label = { Text("Correo Electrónico") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            OutlinedTextField(value = correo, onValueChange = { correo = it }, label = { Text("Correo Electrónico") }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = contrasena,
-                onValueChange = { contrasena = it },
-                label = { Text("Contraseña") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation()
-            )
+            OutlinedTextField(value = contrasena, onValueChange = { contrasena = it }, label = { Text("Contraseña") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = {
@@ -62,6 +46,13 @@ fun RegistroFeriante() {
             }, modifier = Modifier.fillMaxWidth()) {
                 Text("Registrarse")
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar")
+            }
         }
     }
 }
+

@@ -1,6 +1,5 @@
-package com.example.aplicacionferialibre.ui.theme
+package com.example.aplicacionferialibre.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment

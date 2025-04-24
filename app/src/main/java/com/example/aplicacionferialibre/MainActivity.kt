@@ -15,6 +15,7 @@ import androidx.navigation.compose.*
 import com.example.aplicacionferialibre.ui.theme.AplicacionFeriaLibreTheme
 import androidx.navigation.navArgument
 import androidx.navigation.NavHostController
+import com.example.aplicacionferialibre.screens.PantallaRegistro
 import com.google.firebase.FirebaseApp
 
 
@@ -25,7 +26,7 @@ class MainActivity : ComponentActivity() {
         FirebaseApp.initializeApp(this)
         setContent {
             AplicacionFeriaLibreTheme {
-                PantallaUsuarioApp() // ← aquí llamas directamente a la nueva interfaz de usuario
+                PantallaUsuarioApp()
             }
         }
     }
@@ -35,7 +36,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigator() {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = "menu_inicial") {
+    NavHost(navController, startDestination = "panel_usuario") {
         composable("menu_inicial") { MenuInicial(navController) }
         composable(
             "login/{tipo}",
@@ -43,10 +44,11 @@ fun AppNavigator() {
         ) { backStackEntry ->
             PantallaLogin(navController, backStackEntry.arguments?.getString("tipo") ?: "usuario")
         }
-        composable("panel_usuario") { PanelUsuario(navController) }
-        composable("panel_feriante") { PanelFeriante(navController) }
-        composable("registro_usuario") { RegistroUsuario() }
-        composable("registro_feriante") { RegistroFeriante() }
+        composable("panel_usuario") { PantallaUsuarioApp() }
+        //composable("panel_feriante") { PanelFeriante(navController) }
+        composable("registro"){ PantallaRegistro{navController.popBackStack()} }
+        //composable("registro_usuario") { RegistroUsuario{navController.popBackStack()} }
+        //composable("registro_feriante") { RegistroFeriante{navController.popBackStack()} }
     }
 }
 
