@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 
@@ -29,12 +30,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.aplicacionferialibre.screens.PantallaAgregarFeria
+import com.example.aplicacionferialibre.screens.PantallaGestionSolicitudes
 import com.example.aplicacionferialibre.screens.PantallaInscribirPuesto
 import com.example.aplicacionferialibre.screens.PantallaLoginSimple
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.example.aplicacionferialibre.screens.PantallaRegistro
+import com.example.aplicacionferialibre.screens.PantallaVerSolicitudes
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -64,7 +68,7 @@ fun PantallaUsuarioApp() {
                 },
                 actions = {
                     IconButton(onClick = {
-                        mostrarLogin = true // siempre abre el panel
+                        mostrarLogin = true
                     }) {
                         Icon(imageVector = Icons.Default.Person, contentDescription = "Cuenta")
                     }
@@ -80,19 +84,39 @@ fun PantallaUsuarioApp() {
                 navController = navController,
                 startDestination = UsuarioScreen.Mapa.route
             ) {
-                composable(UsuarioScreen.Mapa.route) { PantallaMapa() }
-                composable(UsuarioScreen.Puestos.route) { PantallaExplorarPuestos() }
+                composable(UsuarioScreen.Mapa.route) {
+                    PantallaMapa()
+                }
+
+                composable(UsuarioScreen.Puestos.route) {
+                    PantallaExplorarPuestos()
+                }
+
                 composable("registro") {
                     PantallaRegistro {
                         navController.popBackStack()
                     }
                 }
+
                 composable("inscribir_puesto") {
-                    PantallaInscribirPuesto(
-                        onSubmitSuccess = {
-                            navController.popBackStack()
-                        }
+                    PantallaInscribirPuesto(onSubmitSuccess = {
+                        navController.navigate(UsuarioScreen.Mapa.route)
+                    })
+                }
+                composable("ver_solicitudes") {
+                    PantallaVerSolicitudes(
+                        onBack = { navController.navigate(UsuarioScreen.Mapa.route) }
                     )
+                }
+
+                composable("gestionar_solicitudes") {
+                    PantallaGestionSolicitudes(
+                        onBack = { navController.navigate(UsuarioScreen.Mapa.route) }
+                    )
+                }
+
+                composable("agregar_feria") {
+                    PantallaAgregarFeria(onBack = { navController.navigate(UsuarioScreen.Mapa.route) })
                 }
             }
 
@@ -102,7 +126,6 @@ fun PantallaUsuarioApp() {
                     color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                 ) {
                     if (nombreUsuario == null) {
-                        // Mostrar login
                         PantallaLoginSimple(
                             navController = navController,
                             tipo = "usuario",
@@ -114,7 +137,6 @@ fun PantallaUsuarioApp() {
                             }
                         )
                     } else {
-                        // Mostrar sesión activa
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -133,10 +155,36 @@ fun PantallaUsuarioApp() {
                                     Text("¡Inscribe tu puesto!")
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
+
+                                Button(onClick = {
+                                    navController.navigate("ver_solicitudes")
+                                    mostrarLogin = false
+                                }) {
+                                    Text("Ver solicitudes enviadas")
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            if (FirebaseAuth.getInstance().currentUser?.email == "admin@admin.cl") {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = {
+                                    navController.navigate("gestionar_solicitudes")
+                                    mostrarLogin = false
+                                }) {
+                                    Text("Gestionar solicitudes (Admin)")
+                                }
+
+                                    Button(onClick = {
+                                        navController.navigate("agregar_feria")
+                                        mostrarLogin = false
+                                    }) {
+                                        Text("Agregar nueva feria")
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
                             }
 
                             Button(onClick = {
-                                mostrarLogin = false // solo oculta el panel
+                                mostrarLogin = false
                             }) {
                                 Text("Volver")
                             }
@@ -154,8 +202,6 @@ fun PantallaUsuarioApp() {
                     }
                 }
             }
-
-
         }
     }
 }
@@ -208,7 +254,45 @@ fun PantallaMapa() {
 
 @Composable
 fun PantallaExplorarPuestos() {
+    val db = Firebase.firestore
+    var feriantesAceptados by remember { mutableStateOf(listOf<Map<String, String>>()) }
+
+    LaunchedEffect(Unit) {
+        db.collection("inscripciones")
+            .whereEqualTo("estado", "aceptado")
+            .get()
+            .addOnSuccessListener { result ->
+                feriantesAceptados = result.map { doc ->
+                    mapOf(
+                        "feria" to (doc.getString("feria") ?: ""),
+                        "productos" to (doc.getString("productos") ?: "")
+                    )
+                }
+            }
+    }
+
     Surface(modifier = Modifier.padding(16.dp)) {
-        Text("Aquí se mostrarán los puestos y productos 🛍️")
+        Column {
+            Text("Feriantes Activos 🛒", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (feriantesAceptados.isEmpty()) {
+                Text("Aún no hay feriantes aceptados.")
+            } else {
+                feriantesAceptados.forEach { feria ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Feria: ${feria["feria"]}")
+                            Text("Productos: ${feria["productos"]}")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
