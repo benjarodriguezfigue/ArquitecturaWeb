@@ -1,5 +1,6 @@
 package com.example.aplicacionferialibre.screens
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -7,31 +8,45 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import android.app.DatePickerDialog
-import androidx.compose.ui.platform.LocalContext
-import java.util.Calendar
-import java.util.Locale
 
 @Composable
 fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
-    val feriasDisponibles = listOf("Estación Central")
-    var feriaSeleccionada by remember { mutableStateOf(feriasDisponibles.first()) }
+    val db = Firebase.firestore
+    val feriasDisponibles = remember { mutableStateListOf<String>() }
+    var feriaSeleccionada by remember { mutableStateOf("") }
     var productos by remember { mutableStateOf("") }
     var fechaSolicitud by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val db = com.google.firebase.Firebase.firestore
     val auth = FirebaseAuth.getInstance()
     val calendario = Calendar.getInstance()
     val fechaFormateada = remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    // Cargar ferias desde Firebase
+    LaunchedEffect(Unit) {
+        db.collection("ferias").get().addOnSuccessListener { result ->
+            feriasDisponibles.clear()
+            for (document in result) {
+                val nombre = document.getString("nombre")
+                if (nombre != null) {
+                    feriasDisponibles.add(nombre)
+                }
+            }
+            if (feriasDisponibles.isNotEmpty()) {
+                feriaSeleccionada = feriasDisponibles.first()
+            }
+        }
+    }
 
     val datePickerDialog = DatePickerDialog(
         context,
@@ -47,7 +62,6 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
         calendario.get(Calendar.DAY_OF_MONTH)
     )
 
-
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         Column(
             modifier = Modifier
@@ -61,9 +75,11 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("Selecciona la feria")
-            DropdownMenuBox(items = feriasDisponibles, selected = feriaSeleccionada, onSelected = {
-                feriaSeleccionada = it
-            })
+            DropdownMenuBox(
+                items = feriasDisponibles,
+                selected = feriaSeleccionada,
+                onSelected = { feriaSeleccionada = it }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -89,12 +105,18 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
                 Text("Seleccionar Fecha")
             }
 
-
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
                     val userId = auth.currentUser?.uid
+                    if (feriaSeleccionada.isBlank() || productos.isBlank() || fechaFormateada.value.isBlank()) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Todos los campos son obligatorios.")
+                        }
+                        return@Button
+                    }
+
                     if (userId != null) {
                         val datos = mapOf(
                             "usuarioId" to userId,
@@ -107,7 +129,7 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
                             .add(datos)
                             .addOnSuccessListener {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("Puesto inscrito correctamente")
+                                    snackbarHostState.showSnackbar("Solicitud enviada")
                                     onSubmitSuccess()
                                 }
                             }
@@ -122,6 +144,7 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
                         }
                     }
                 },
+
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Enviar inscripción")
@@ -130,7 +153,7 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = { onSubmitSuccess() }, // Esto ejecuta la acción de cierre o navegación
+                onClick = { onSubmitSuccess() },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
@@ -173,4 +196,3 @@ fun DropdownMenuBox(items: List<String>, selected: String, onSelected: (String) 
         }
     }
 }
-

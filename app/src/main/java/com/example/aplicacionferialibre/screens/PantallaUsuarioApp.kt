@@ -26,26 +26,41 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.room.util.copy
 import com.example.aplicacionferialibre.screens.PantallaAgregarFeria
 import com.example.aplicacionferialibre.screens.PantallaGestionSolicitudes
 import com.example.aplicacionferialibre.screens.PantallaInscribirPuesto
 import com.example.aplicacionferialibre.screens.PantallaLoginSimple
+import com.example.aplicacionferialibre.screens.SolicitarPermisosUbicacion
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.example.aplicacionferialibre.screens.PantallaRegistro
 import com.example.aplicacionferialibre.screens.PantallaVerSolicitudes
+import com.example.aplicacionferialibre.models.FeriaCompleta
+import com.example.aplicacionferialibre.screens.PantallaAdministrarFerias
+import com.example.aplicacionferialibre.screens.PantallaAgregarProducto
+import com.example.aplicacionferialibre.screens.PantallaMisPuestos
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.firebase.auth.ktx.auth
+
 
 sealed class UsuarioScreen(val route: String, val label: String, val icon: ImageVector) {
     object Mapa : UsuarioScreen("mapa", "Mapa", Icons.Filled.Place)
     object Puestos : UsuarioScreen("puestos", "Puestos", Icons.Filled.ShoppingCart)
+
+    data class Custom(val customRoute: String, val customLabel: String, val customIcon: ImageVector)
+        : UsuarioScreen(customRoute, customLabel, customIcon)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +91,7 @@ fun PantallaUsuarioApp() {
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController)
+            BottomNavigationBar(navController, tipoUsuario)
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
@@ -117,6 +132,42 @@ fun PantallaUsuarioApp() {
 
                 composable("agregar_feria") {
                     PantallaAgregarFeria(onBack = { navController.navigate(UsuarioScreen.Mapa.route) })
+                }
+
+                composable("administrarFerias") {
+                    PantallaAdministrarFerias(
+                        onBack = { navController.popBackStack() },
+                        onEditarFeria = { feriaId -> navController.navigate("editarFeria/$feriaId") }
+                    )
+                }
+
+                composable(
+                    "editarFeria/{feriaId}",
+                    arguments = listOf(navArgument("feriaId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val feriaId = backStackEntry.arguments?.getString("feriaId") ?: return@composable
+                    PantallaEditarFeriaWrapper(feriaId = feriaId, onVolver = { navController.popBackStack() })
+                }
+
+                composable("mis_puestos") {
+                    PantallaMisPuestos(
+                        userId = Firebase.auth.currentUser?.uid ?: "",
+                        onModificar = { puestoId ->
+                            navController.navigate("agregar_producto/$puestoId") },
+                        onInscribir = {
+                            navController.navigate("inscribir_puesto")
+                        },
+                        onVolver = { navController.navigate("mapa") }
+                    )
+                }
+
+                composable("agregar_producto/{puestoId}") { backStackEntry ->
+                    val puestoId = backStackEntry.arguments?.getString("puestoId") ?: ""
+                    PantallaAgregarProducto(
+                        puestoId = puestoId,
+                        onProductoAgregado = { navController.popBackStack() },
+                        onCancelar = { navController.popBackStack() }
+                    )
                 }
             }
 
@@ -168,19 +219,28 @@ fun PantallaUsuarioApp() {
                             if (FirebaseAuth.getInstance().currentUser?.email == "admin@admin.cl") {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(onClick = {
-                                    navController.navigate("gestionar_solicitudes")
                                     mostrarLogin = false
+                                    navController.navigate("gestionar_solicitudes")
                                 }) {
                                     Text("Gestionar solicitudes (Admin)")
                                 }
 
                                     Button(onClick = {
-                                        navController.navigate("agregar_feria")
                                         mostrarLogin = false
+                                        navController.navigate("agregar_feria")
                                     }) {
                                         Text("Agregar nueva feria")
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
+
+                                Button(
+                                    onClick = {
+                                        mostrarLogin = false
+                                        navController.navigate("administrarFerias") },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Administrar Ferias")
+                                }
                             }
 
                             Button(onClick = {
@@ -207,26 +267,37 @@ fun PantallaUsuarioApp() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
-    val items = listOf(
-        UsuarioScreen.Mapa,
-        UsuarioScreen.Puestos
-    )
+fun BottomNavigationBar(navController: NavHostController, tipoUsuario: String?) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val mapaItem = UsuarioScreen.Mapa
+    val puestosLabel = if (tipoUsuario == "feriante") "Tus Puestos" else "Puestos"
+    val puestosItem = UsuarioScreen.Custom("puestos", puestosLabel, Icons.Filled.ShoppingCart)
+
+    val items = listOf(mapaItem, puestosItem)
+
     NavigationBar {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
         items.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.label) },
                 label = { Text(screen.label) },
                 selected = currentRoute == screen.route,
                 onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                    when (screen.route) {
+                        "puestos" -> {
+                            if (tipoUsuario == "feriante") {
+                                navController.navigate("mis_puestos")
+                            } else {
+                                navController.navigate("puestos")
+                            }
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                        "mapa" -> {
+                            navController.navigate("mapa")
+                        }
+                        else -> {
+                            navController.navigate("mapa")
+                        }
                     }
                 }
             )
@@ -234,21 +305,60 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
+
+
 @Composable
 fun PantallaMapa() {
+    val mostrar = remember { mutableStateOf(false) }
+
+    SolicitarPermisosUbicacion {
+        mostrar.value = true
+    }
+
+    if (mostrar.value) {
+        MostrarMapaConUbicacion()
+    }
+}
+
+@Composable
+fun MostrarMapaConUbicacion() {
+    val db = Firebase.firestore
     val santiago = LatLng(-33.4489, -70.6693)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(santiago, 12f)
     }
 
+    var ferias by remember { mutableStateOf(listOf<FeriaCompleta>()) }
+
+    // Obtener ferias desde Firebase
+    LaunchedEffect(true) {
+        db.collection("ferias").get().addOnSuccessListener { result ->
+            ferias = result.map { doc ->
+                FeriaCompleta(
+                    nombre = doc.getString("nombre") ?: "",
+                    comuna = doc.getString("comuna") ?: "",
+                    direccion = doc.getString("direccion") ?: "",
+                    latitud = doc.getDouble("latitud") ?: 0.0,
+                    longitud = doc.getDouble("longitud") ?: 0.0
+                )
+            }
+        }
+    }
+
+    // Mapa con markers de ferias
     GoogleMap(
-        modifier = Modifier.padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         cameraPositionState = cameraPositionState
     ) {
-        Marker(
-            state = MarkerState(position = santiago),
-            title = "Feria Central Santiago"
-        )
+        ferias.forEach { feria ->
+            Marker(
+                state = MarkerState(position = LatLng(feria.latitud, feria.longitud)),
+                title = feria.nombre,
+                snippet = "${feria.comuna} - ${feria.direccion}"
+            )
+        }
     }
 }
 

@@ -62,8 +62,8 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:4.3.0")
     implementation("com.google.android.gms:play-services-maps:18.1.0")
 
-
-
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -73,6 +73,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation(libs.androidx.navigation.common.ktx)
+    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.room.runtime.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
