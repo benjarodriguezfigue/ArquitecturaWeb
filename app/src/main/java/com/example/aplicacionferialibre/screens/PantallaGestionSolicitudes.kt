@@ -18,6 +18,7 @@ data class SolicitudEditable(
     val feria: String,
     val productos: String,
     val fechaSolicitud: String,
+    val nombrePuesto: String,
     var estado: String
 )
 
@@ -40,6 +41,7 @@ fun PantallaGestionSolicitudes(onBack: () -> Unit) {
                         feria = doc.getString("feria") ?: "",
                         productos = doc.getString("productos") ?: "",
                         fechaSolicitud = doc.getString("fechaSolicitud") ?: "",
+                        nombrePuesto = doc.getString("nombrePuesto") ?: "",
                         estado = doc.getString("estado") ?: ""
                     )
                 }
@@ -110,6 +112,7 @@ fun PantallaGestionSolicitudes(onBack: () -> Unit) {
                                 Text("Productos: ${solicitud.productos}")
                                 Text("Fecha: ${solicitud.fechaSolicitud}")
                                 Text("Estado: ${solicitud.estado}")
+                                Text("Puesto: ${solicitud.nombrePuesto.ifBlank { "Sin nombre" }}")
 
                                 Spacer(modifier = Modifier.height(8.dp))
 

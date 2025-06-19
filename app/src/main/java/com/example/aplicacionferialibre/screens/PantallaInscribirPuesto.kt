@@ -24,6 +24,7 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
     var feriaSeleccionada by remember { mutableStateOf("") }
     var productos by remember { mutableStateOf("") }
     var fechaSolicitud by remember { mutableStateOf("") }
+    var nombrePuesto by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -84,6 +85,15 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
+                value = nombrePuesto,
+                onValueChange = { nombrePuesto = it },
+                label = { Text("Nombre del puesto") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
                 value = productos,
                 onValueChange = { productos = it },
                 label = { Text("¿Qué productos vas a vender?") },
@@ -110,7 +120,7 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
             Button(
                 onClick = {
                     val userId = auth.currentUser?.uid
-                    if (feriaSeleccionada.isBlank() || productos.isBlank() || fechaFormateada.value.isBlank()) {
+                    if (feriaSeleccionada.isBlank() || nombrePuesto.isBlank() || productos.isBlank() || fechaFormateada.value.isBlank()) {
                         scope.launch {
                             snackbarHostState.showSnackbar("Todos los campos son obligatorios.")
                         }
@@ -123,7 +133,8 @@ fun PantallaInscribirPuesto(onSubmitSuccess: () -> Unit = {}) {
                             "feria" to feriaSeleccionada,
                             "productos" to productos,
                             "fechaSolicitud" to fechaFormateada.value,
-                            "estado" to "pendiente"
+                            "estado" to "pendiente",
+                            "nombrePuesto" to nombrePuesto
                         )
                         db.collection("inscripciones")
                             .add(datos)

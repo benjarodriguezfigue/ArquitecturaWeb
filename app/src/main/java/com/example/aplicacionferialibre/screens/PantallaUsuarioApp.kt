@@ -49,6 +49,7 @@ import com.example.aplicacionferialibre.screens.PantallaAgregarProducto
 import com.example.aplicacionferialibre.screens.PantallaMisPuestos
 import com.example.aplicacionferialibre.screens.PantallaListaProductos
 import com.example.aplicacionferialibre.screens.PantallaEditarProducto
+import com.example.aplicacionferialibre.screens.PantallaExplorarFeriasConPuestos
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -80,7 +81,7 @@ fun PantallaUsuarioApp() {
                     if (nombreUsuario != null && tipoUsuario != null) {
                         Text("Bienvenido $tipoUsuario: $nombreUsuario")
                     } else {
-                        Text("Ferias Cercanas")
+                        Text("Ferias disponibles")
                     }
                 },
                 actions = {
@@ -102,11 +103,19 @@ fun PantallaUsuarioApp() {
                 startDestination = UsuarioScreen.Mapa.route
             ) {
                 composable(UsuarioScreen.Mapa.route) {
-                    PantallaMapa()
+                    if (tipoUsuario.isNullOrBlank()) {
+                        PantallaSoloFerias()
+                    } else {
+                        PantallaMapa()
+                    }
                 }
 
                 composable(UsuarioScreen.Puestos.route) {
-                    PantallaExplorarPuestos()
+                    if (tipoUsuario == "usuario") {
+                        PantallaExplorarFeriasConPuestos(navController)
+                    } else {
+                        Text("Funcionalidad no disponible para este perfil.")
+                    }
                 }
 
                 composable("registro") {
@@ -202,6 +211,10 @@ fun PantallaUsuarioApp() {
                         onProductoActualizado = { backStackEntry.savedStateHandle["refresh"] = true },
                         onCancelar = { backStackEntry.savedStateHandle["refresh"] = true }
                     )
+                }
+
+                composable("explorar_ferias") {
+                    PantallaExplorarFeriasConPuestos(navController)
                 }
             }
 
@@ -309,7 +322,11 @@ fun BottomNavigationBar(navController: NavHostController, tipoUsuario: String?) 
     val puestosLabel = if (tipoUsuario == "feriante") "Tus Puestos" else "Puestos"
     val puestosItem = UsuarioScreen.Custom("puestos", puestosLabel, Icons.Filled.ShoppingCart)
 
-    val items = listOf(mapaItem, puestosItem)
+    val items = if (tipoUsuario.isNullOrBlank()) {
+        listOf(mapaItem) // solo mapa visible sin sesión
+    } else {
+        listOf(mapaItem, puestosItem) // mapa y puestos si hay sesión
+    }
 
     NavigationBar {
         items.forEach { screen ->
@@ -396,23 +413,80 @@ fun MostrarMapaConUbicacion() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaExplorarPuestos() {
+fun PantallaSoloFerias() {
+    val db = Firebase.firestore
+    val santiago = LatLng(-33.4489, -70.6693)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(santiago, 12f)
+    }
+
+    var ferias by remember { mutableStateOf(listOf<FeriaCompleta>()) }
+
+    // Cargar ferias desde Firebase
+    LaunchedEffect(Unit) {
+        db.collection("ferias").get().addOnSuccessListener { result ->
+            ferias = result.map { doc ->
+                FeriaCompleta(
+                    nombre = doc.getString("nombre") ?: "",
+                    comuna = doc.getString("comuna") ?: "",
+                    direccion = doc.getString("direccion") ?: "",
+                    latitud = doc.getDouble("latitud") ?: 0.0,
+                    longitud = doc.getDouble("longitud") ?: 0.0
+                )
+            }
+        }
+    }
+
+    Scaffold(
+    ) { padding ->
+        GoogleMap(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            cameraPositionState = cameraPositionState
+        ) {
+            ferias.forEach { feria ->
+                Marker(
+                    state = MarkerState(position = LatLng(feria.latitud, feria.longitud)),
+                    title = feria.nombre,
+                    snippet = "${feria.comuna} - ${feria.direccion}"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PantallaSolicitaLogin() {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("Debes iniciar sesión como usuario para ver los puestos.")
+        }
+    }
+}
+
+// Paso 1: Mostrar ferias y puestos con productos solo si hay sesión iniciada como 'usuario'
+@Composable
+fun PantallaExplorarPuestosUsuario(tipoUsuario: String?) {
     val db = Firebase.firestore
     var feriantesAceptados by remember { mutableStateOf(listOf<Map<String, String>>()) }
 
-    LaunchedEffect(Unit) {
-        db.collection("inscripciones")
-            .whereEqualTo("estado", "aceptado")
-            .get()
-            .addOnSuccessListener { result ->
-                feriantesAceptados = result.map { doc ->
-                    mapOf(
-                        "feria" to (doc.getString("feria") ?: ""),
-                        "productos" to (doc.getString("productos") ?: "")
-                    )
+    LaunchedEffect(tipoUsuario) {
+        if (tipoUsuario == "usuario") {
+            db.collection("inscripciones")
+                .whereEqualTo("estado", "aceptado")
+                .get()
+                .addOnSuccessListener { result ->
+                    feriantesAceptados = result.map { doc ->
+                        mapOf(
+                            "feria" to (doc.getString("feria") ?: ""),
+                            "productos" to (doc.getString("productos") ?: "")
+                        )
+                    }
                 }
-            }
+        }
     }
 
     Surface(modifier = Modifier.padding(16.dp)) {
@@ -420,7 +494,9 @@ fun PantallaExplorarPuestos() {
             Text("Feriantes Activos 🛒", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (feriantesAceptados.isEmpty()) {
+            if (tipoUsuario != "usuario") {
+                Text("Inicia sesión como usuario para ver los puestos disponibles")
+            } else if (feriantesAceptados.isEmpty()) {
                 Text("Aún no hay feriantes aceptados.")
             } else {
                 feriantesAceptados.forEach { feria ->
