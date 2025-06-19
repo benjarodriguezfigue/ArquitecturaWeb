@@ -47,6 +47,8 @@ import com.example.aplicacionferialibre.models.FeriaCompleta
 import com.example.aplicacionferialibre.screens.PantallaAdministrarFerias
 import com.example.aplicacionferialibre.screens.PantallaAgregarProducto
 import com.example.aplicacionferialibre.screens.PantallaMisPuestos
+import com.example.aplicacionferialibre.screens.PantallaListaProductos
+import com.example.aplicacionferialibre.screens.PantallaEditarProducto
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -157,6 +159,9 @@ fun PantallaUsuarioApp() {
                         onInscribir = {
                             navController.navigate("inscribir_puesto")
                         },
+                        onVerProductos = { puestoId ->
+                            navController.navigate("ver_productos/$puestoId")
+                        },
                         onVolver = { navController.navigate("mapa") }
                     )
                 }
@@ -167,6 +172,35 @@ fun PantallaUsuarioApp() {
                         puestoId = puestoId,
                         onProductoAgregado = { navController.popBackStack() },
                         onCancelar = { navController.popBackStack() }
+                    )
+                }
+
+                composable("ver_productos/{puestoId}") { backStackEntry ->
+                    val puestoId = backStackEntry.arguments?.getString("puestoId") ?: ""
+                    PantallaListaProductos(
+                        puestoId = puestoId,
+                        onEditarProducto = { productoId ->
+                            navController.navigate("editar_producto/$puestoId/$productoId")
+                        },
+                        onVolver = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = "editar_producto/{puestoId}/{productoId}",
+                    arguments = listOf(
+                        navArgument("puestoId") { type = NavType.StringType },
+                        navArgument("productoId") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val puestoId = backStackEntry.arguments?.getString("puestoId") ?: return@composable
+                    val productoId = backStackEntry.arguments?.getString("productoId") ?: return@composable
+
+                    PantallaEditarProducto(
+                        puestoId = puestoId,
+                        productoId = productoId,
+                        onProductoActualizado = { backStackEntry.savedStateHandle["refresh"] = true },
+                        onCancelar = { backStackEntry.savedStateHandle["refresh"] = true }
                     )
                 }
             }

@@ -65,6 +65,11 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

@@ -10,14 +10,15 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
-import com.google.firebase.firestore.QuerySnapshot
-
 
 @Composable
-fun PantallaMisPuestos(userId: String,
-                       onInscribir: () -> Unit,
-                       onModificar: (String) -> Unit,
-                       onVolver: () -> Unit) {
+fun PantallaMisPuestos(
+    userId: String,
+    onInscribir: () -> Unit,
+    onModificar: (String) -> Unit,
+    onVerProductos: (String) -> Unit,
+    onVolver: () -> Unit
+) {
     val db = Firebase.firestore
     val auth = FirebaseAuth.getInstance()
     val usuarioId = auth.currentUser?.uid
@@ -33,8 +34,8 @@ fun PantallaMisPuestos(userId: String,
                 .get()
                 .addOnSuccessListener { docs ->
                     if (!docs.isEmpty) {
-                        val doc = docs.documents.first()
-                        puesto = doc.data!! + ("id" to doc.id)
+                        val doc = docs.first()
+                        puesto = doc.data + ("id" to doc.id)
                     }
                     cargando = false
                 }
@@ -73,14 +74,18 @@ fun PantallaMisPuestos(userId: String,
                     Text("Fecha de solicitud: ${puesto!!["fechaSolicitud"]}")
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val puestoId = puesto?.get("id") as? String
+                    Button(onClick = {
+                        val puestoId = puesto!!["id"].toString()
+                        onModificar(puestoId)
+                    }) {
+                        Text("Agregar nuevo producto")
+                    }
 
-                    if (puestoId != null) {
-                        Button(onClick = {
-                            onModificar(puestoId)
-                        }) {
-                            Text("Modificar productos")
-                        }
+                    Button(onClick = {
+                        val puestoId = puesto!!["id"] as? String ?: return@Button
+                        onVerProductos(puestoId)
+                    }) {
+                        Text("Administrar mis productos")
                     }
                 }
             }
