@@ -19,9 +19,6 @@
 - **Arquitectura recomendada:** MVVM (en transición desde pantallas monolíticas)
 - **Gestión de estado:** `remember`, `mutableStateOf`
 
-## 📷 Capturas de Pantalla
-
-*(Agregar imágenes aquí en el repositorio si deseas mostrarlas visualmente)*
 
 ## 🧑‍💻 Instalación del Proyecto
 
